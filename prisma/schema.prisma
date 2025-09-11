@@ -31,6 +31,6 @@ model Message {
   role        Role
   content     String      @db.Text
   createdAt   DateTime    @default(now())
-  chatSession ChatSession @relation(fields: [sessionId], references: [id])
+  chatSession ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   sessionId   String
 }
