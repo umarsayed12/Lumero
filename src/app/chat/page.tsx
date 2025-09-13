@@ -2,30 +2,45 @@
 
 import { trpc } from "@/app/_trpc/client";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
-export default function CreateChatPage() {
+export default function ChatRedirectPage() {
   const router = useRouter();
+  const creationTriggered = useRef(false);
+
+  const { data: sessions, isLoading: isLoadingSessions } =
+    trpc.chat.getChatSessions.useQuery();
+
   const {
     mutate: createSession,
-    isIdle,
-    isSuccess,
-    data,
+    data: newSessionData,
+    isSuccess: isCreateSuccess,
   } = trpc.chat.createChatSession.useMutation();
 
   useEffect(() => {
-    if (isIdle) createSession();
-  }, [isIdle, createSession]);
+    if (isLoadingSessions) {
+      return;
+    }
+
+    if (sessions && sessions.length > 0) {
+      router.push(`/chat/${sessions[0].id}`);
+    } else if (!isLoadingSessions && (!sessions || sessions.length === 0)) {
+      if (!creationTriggered.current) {
+        createSession();
+        creationTriggered.current = true;
+      }
+    }
+  }, [sessions, isLoadingSessions, createSession, router]);
 
   useEffect(() => {
-    if (isSuccess && data) {
-      router.push(`/chat/${data.id}`);
+    if (isCreateSuccess && newSessionData) {
+      router.push(`/chat/${newSessionData.id}`);
     }
-  }, [isSuccess, data, router]);
+  }, [isCreateSuccess, newSessionData, router]);
 
   return (
     <div className="flex items-center justify-center h-screen">
-      <p>Creating a new chat...</p>
+      <p>Loading your conversations...</p>
     </div>
   );
 }

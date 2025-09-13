@@ -13,7 +13,7 @@ export default function ChatLayout({
         <Sidebar />
         <div className="w-full flex flex-col items-start">
           <Header />
-          <main className="flex-1 overflow-auto">{children}</main>
+          <main className="flex-1 w-full overflow-auto">{children}</main>
         </div>
       </div>
     </SidebarProvider>

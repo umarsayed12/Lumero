@@ -2,7 +2,7 @@
 
 import { trpc } from "@/app/_trpc/client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   Sidebar as SideBar,
   SidebarContent,
@@ -19,20 +19,48 @@ import {
 import {
   BotIcon,
   Ellipsis,
+  FileText,
   PencilIcon,
   ShareIcon,
   SquarePen,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "./ui/input";
+import { type ChatSession } from "@prisma/client";
+import { useEffect, useState } from "react";
 import { Button } from "./ui/button";
 
+type SessionBase = Omit<ChatSession, "createdAt" | "updatedAt">;
+
+type ClientSideSession = SessionBase & {
+  createdAt: string;
+  updatedAt: string;
+};
+type SessionWithDocCount = ClientSideSession & {
+  _count: {
+    documents: number;
+  };
+};
 export default function Sidebar() {
   const router = useRouter();
+  const params = useParams();
   const [hoverId, setHoverId] = useState("");
   const [openMenuId, setOpenMenuId] = useState("");
   const [openMenu, setOpenMenu] = useState(false);
   const { toggleSidebar, state } = useSidebar();
+  const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [activeId, setActiveId] = useState(params.sessionId);
+  const [sessionToRename, setSessionToRename] =
+    useState<SessionWithDocCount | null>(null);
+  const [newTopicInput, setNewTopicInput] = useState("");
   const utils = trpc.useUtils();
   const {
     data: sessions,
@@ -57,8 +85,56 @@ export default function Sidebar() {
     },
   });
 
+  const { mutate: updateTopic } = trpc.chat.updateSessionTopic.useMutation({
+    onSuccess: () => {
+      setIsRenameModalOpen(false);
+      utils.chat.getChatSessions.invalidate();
+    },
+  });
+
+  const handleRenameClick = (session: SessionWithDocCount) => {
+    setSessionToRename(session);
+    setNewTopicInput(session.topic || "");
+    setIsRenameModalOpen(true);
+    setOpenMenuId("");
+  };
+
+  const handleSaveRename = () => {
+    if (sessionToRename && newTopicInput.trim()) {
+      updateTopic({
+        sessionId: sessionToRename.id,
+        topic: newTopicInput,
+      });
+    }
+  };
   return (
     <SideBar className="py-1" collapsible="icon">
+      <Dialog open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename chat</DialogTitle>
+            <DialogDescription>
+              Enter a new topic for this chat session.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={newTopicInput}
+            onChange={(e) => setNewTopicInput(e.target.value)}
+            placeholder="e.g., Resume review for SDE role"
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsRenameModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button className="cursor-pointer" onClick={handleSaveRename}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <SidebarHeader
         className={`px-4 flex ${
           state === "expanded" ? "flex-row" : "flex-col"
@@ -92,7 +168,12 @@ export default function Sidebar() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {sessions?.map((session) => (
-                    <SidebarMenuItem key={session.id}>
+                    <SidebarMenuItem
+                      className={`${
+                        activeId === session?.id ? "bg-gray-200" : ""
+                      } rounded-md`}
+                      key={session.id}
+                    >
                       <SidebarMenuButton asChild>
                         <div
                           onMouseEnter={() => setHoverId(session.id)}
@@ -100,6 +181,7 @@ export default function Sidebar() {
                           className="flex justify-between items-center cursor-pointer"
                         >
                           <Link
+                            onClick={() => setActiveId(session?.id)}
                             className="w-[95%] active:bg-accent hover:bg-accent cursor-pointer"
                             href={`/chat/${session?.id}`}
                           >
@@ -113,6 +195,12 @@ export default function Sidebar() {
                                       6
                                     )}
                               </p>
+                              {session._count.documents > 0 && (
+                                <div className="flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded-full">
+                                  <FileText className="h-3 w-3" />
+                                  {session._count.documents}
+                                </div>
+                              )}
                             </div>
                           </Link>
                           {hoverId === session.id && (
@@ -132,7 +220,10 @@ export default function Sidebar() {
                             <ShareIcon className="w-4 h-4" />
                             <p>Share</p>
                           </button>
-                          <button className="flex items-center justify-start gap-2 hover:bg-gray-100 rounded-md px-2 py-1 transition cursor-pointer">
+                          <button
+                            onClick={() => handleRenameClick(session)}
+                            className="flex items-center justify-start gap-2 hover:bg-gray-100 rounded-md px-2 py-1 transition cursor-pointer"
+                          >
                             <PencilIcon className="w-4 h-4" />
                             <p>Rename</p>
                           </button>

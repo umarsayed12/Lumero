@@ -2,7 +2,6 @@ import { z } from "zod";
 import { publicProcedure, router } from "../trpc";
 import { prisma } from "@/lib/db";
 import OpenAI from "openai";
-
 const openai = new OpenAI({
   apiKey: process.env.OPENROUTER_API_KEY,
   baseURL: "https://openrouter.ai/api/v1",
@@ -28,6 +27,11 @@ export const chatRouter = router({
         },
       });
 
+      const session = await prisma.chatSession.findUnique({
+        where: { id: input.sessionId },
+        include: { documents: true },
+      });
+
       const chatHistory = await prisma.message.findMany({
         where: { sessionId: input.sessionId },
         orderBy: { createdAt: "asc" },
@@ -38,6 +42,15 @@ export const chatRouter = router({
           role: msg.role === "user" ? "user" : "assistant",
           content: msg.content,
         }));
+
+      let documentContext = "";
+      if (session?.documents && session.documents.length > 0) {
+        documentContext =
+          "Use the following context from the uploaded documents to inform your responses:\n\n";
+        session.documents.forEach((doc) => {
+          documentContext += `---BEGIN DOCUMENT (${doc.fileName})---\n${doc.extractedText}\n---END DOCUMENT---\n\n`;
+        });
+      }
 
       try {
         const chatCompletion = await openai.chat.completions.create({
@@ -58,6 +71,9 @@ You should always maintain a warm, encouraging, and respectful tone.
    - If yes → analyze the resume (skills, education, experience, interests) and tailor your responses to suggest roles, industries, skills to improve, certifications, and career paths. 
    - If no → continue with a set of **initial context questions** to understand the user better.
 
+CONTEXT = "${documentContext}"
+
+If the above context is empty, that means resume or other related document is not provided.
 ### Initial Context Questions (if resume not provided)
 Ask engaging questions like:
 - What stage are you currently at? (student, recent graduate, working professional, career switcher, etc.)
@@ -133,6 +149,7 @@ Tone: **Professional, Supportive, Inspiring, and Conversational.**
       orderBy: {
         createdAt: "desc",
       },
+      include: { _count: { select: { documents: true } } },
     });
     return sessions;
   }),
@@ -150,6 +167,36 @@ Tone: **Professional, Supportive, Inspiring, and Conversational.**
       await prisma.chatSession.delete({
         where: {
           id: input.sessionId,
+        },
+      });
+      return { success: true };
+    }),
+
+  getChatSessionById: publicProcedure
+    .input(z.object({ sessionId: z.string().cuid() }))
+    .query(async ({ input }) => {
+      const session = await prisma.chatSession.findUnique({
+        where: {
+          id: input.sessionId,
+        },
+      });
+      return session;
+    }),
+
+  updateSessionTopic: publicProcedure
+    .input(
+      z.object({
+        sessionId: z.string().cuid(),
+        topic: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      await prisma.chatSession.update({
+        where: {
+          id: input.sessionId,
+        },
+        data: {
+          topic: input.topic,
         },
       });
       return { success: true };

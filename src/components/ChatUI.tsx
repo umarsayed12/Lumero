@@ -6,6 +6,18 @@ import { cn } from "@/lib/utils";
 import FormattedResponse from "./FormattedResponse";
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { useSidebar } from "./ui/sidebar";
+import { PlusCircle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import UploadButton from "./UploadButton";
 const placeholders = [
   "What career path would suit my skills best?",
   "Which certifications should I pursue to grow in my field?",
@@ -16,11 +28,18 @@ const placeholders = [
 export default function ChatUI({ sessionId }: { sessionId: string }) {
   const [message, setMessage] = useState("");
   const utils = trpc.useUtils();
+  const [isTopicModalOpen, setIsTopicModalOpen] = useState(false);
+  const [topicInput, setTopicInput] = useState("");
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { state } = useSidebar();
+
+  const { refetch } = trpc.chat.getChatSessions.useQuery();
+
   const { data: messages, isLoading: isMessagesLoading } =
     trpc.chat.getMessages.useQuery({ sessionId });
-
+  const { data: session } = trpc.chat.getChatSessionById.useQuery({
+    sessionId,
+  });
   const { mutate: sendMessage } = trpc.chat.sendMessage.useMutation({
     onMutate: async ({ message }) => {
       setMessage("");
@@ -44,6 +63,7 @@ export default function ChatUI({ sessionId }: { sessionId: string }) {
       }
     },
     onSettled: () => {
+      refetch();
       utils.chat.getMessages.invalidate({ sessionId });
     },
   });
@@ -65,12 +85,52 @@ export default function ChatUI({ sessionId }: { sessionId: string }) {
     }
   }, [messages]);
 
+  useEffect(() => {
+    if (session && !session.topic) {
+      setIsTopicModalOpen(true);
+    }
+  }, [session]);
+
+  const { mutate: updateTopic } = trpc.chat.updateSessionTopic.useMutation({
+    onSuccess: () => {
+      utils.chat.getChatSessionById.invalidate({ sessionId });
+      utils.chat.getChatSessions.invalidate();
+      setIsTopicModalOpen(false);
+    },
+  });
+
+  const handleTopicSubmit = () => {
+    if (topicInput.trim()) {
+      updateTopic({ sessionId, topic: topicInput });
+    }
+  };
+
   return (
     <div
       className={`${
         messages?.length ? "pb-40" : ""
-      } flex flex-col gap-10 max-w-8xl w-full mx-auto px-26 pt-6`}
+      } flex flex-col gap-10 max-w-8xl w-full mx-auto md:px-26 pt-6`}
     >
+      <Dialog open={isTopicModalOpen} onOpenChange={setIsTopicModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Name this chat</DialogTitle>
+            <DialogDescription>
+              Give your new chat session a topic to easily find it later.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={topicInput}
+            onChange={(e) => setTopicInput(e.target.value)}
+            placeholder="e.g., Resume review for SDE role"
+          />
+          <DialogFooter>
+            <Button className="cursor-pointer" onClick={handleTopicSubmit}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {messages?.length === 0 && (
         <div className="flex w-full flex-col items-center justify-center min-h-[60vh] space-y-8">
           <div className="px-1 text-center w-full text-pretty text-3xl whitespace-pre-wrap">
@@ -142,11 +202,16 @@ export default function ChatUI({ sessionId }: { sessionId: string }) {
           state === "expanded" ? "left-[50%] md:left-[60%]" : "left-[50%]"
         } -translate-x-1/2 flex flex-col justify-center w-full  items-center px-4`}
       >
-        <PlaceholdersAndVanishInput
-          placeholders={placeholders}
-          onChange={handleChange}
-          onSubmit={handleSubmit}
-        />
+        <div className="flex bg-black p-6 items-center gap-1 w-full max-w-xl rounded-2xl">
+          <div className="px-2">
+            <UploadButton sessionId={sessionId} />
+          </div>
+          <PlaceholdersAndVanishInput
+            placeholders={placeholders}
+            onChange={handleChange}
+            onSubmit={handleSubmit}
+          />
+        </div>
       </div>
     </div>
   );
