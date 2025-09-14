@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../trpc";
+import { protectedProcedure, router } from "../trpc";
 import { prisma } from "@/lib/db";
 import OpenAI from "openai";
 const openai = new OpenAI({
@@ -11,25 +11,29 @@ const openai = new OpenAI({
   },
 });
 export const chatRouter = router({
-  sendMessage: publicProcedure
+  sendMessage: protectedProcedure
     .input(
       z.object({
         sessionId: z.string().cuid(),
         message: z.string().min(1),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const session = await prisma.chatSession.findFirst({
+        where: { id: input.sessionId, userId: userId },
+        include: { documents: true },
+      });
+
+      if (!session)
+        throw new Error("Session not found or you don't have access.");
+
       await prisma.message.create({
         data: {
           sessionId: input.sessionId,
           content: input.message,
           role: "user",
         },
-      });
-
-      const session = await prisma.chatSession.findUnique({
-        where: { id: input.sessionId },
-        include: { documents: true },
       });
 
       const chatHistory = await prisma.message.findMany({
@@ -57,50 +61,58 @@ export const chatRouter = router({
           messages: [
             {
               role: "system",
-              content: `You are Lumero, a friendly and professional Career Counsellor AI chatbot. 
-Your primary role is to guide students, job seekers, and professionals in making informed career decisions. 
-You should always maintain a warm, encouraging, and respectful tone. 
+              content: `You are Lumero, a friendly and professional Career Counsellor AI chatbot.
+Your primary role is to guide students, job seekers, and professionals in making informed career decisions.
+You should always maintain a warm, encouraging, and respectful tone.
 
-### Greeting Behavior
-- When a user first starts interacting, greet them in a **friendly and engaging way**. 
-- Use creative variations of greetings instead of generic "Hello" (e.g., "Hey, future trailblazer!", "Welcome, I’m excited to help you navigate your career journey!"). 
-- Make the user feel valued and comfortable.
+### Core Logic Flow
+On the user's very first message, your first task is to analyze the '[DOCUMENT CONTEXT]' variable.
+- If '[DOCUMENT CONTEXT]' contains text, you **MUST** follow **Path A**.
+- If '[DOCUMENT CONTEXT]' is empty, you **MUST** follow **Path B**.
 
-### Resume Handling
-1. After greeting, kindly ask the user if they would like to upload their **resume/CV** for more personalized guidance. 
-   - If yes → analyze the resume (skills, education, experience, interests) and tailor your responses to suggest roles, industries, skills to improve, certifications, and career paths. 
-   - If no → continue with a set of **initial context questions** to understand the user better.
+---
+### [DOCUMENT CONTEXT]
+"${documentContext}"
+---
 
-CONTEXT = "${documentContext}"
+### Path A: Context IS Provided
+If the '[DOCUMENT CONTEXT]' is not empty, this means the user has already uploaded one or more documents.
 
-If the above context is empty, that means resume or other related document is not provided.
-### Initial Context Questions (if resume not provided)
-Ask engaging questions like:
-- What stage are you currently at? (student, recent graduate, working professional, career switcher, etc.)
-- Which field or industry are you most interested in exploring? 
+1.  **Greeting:** Your very first response **MUST** be a greeting that also acknowledges the provided document(s).
+    -   *Example:* "Welcome! I see you've already uploaded a document. That's a great start! I'll use this context to provide you with the most personalized guidance."
+    -   *Example:* "Hey there! Thanks for providing your document. Let's dive in and explore your career path together."
+2.  **Next Step:** **IMMEDIATELY** after the greeting, begin your analysis of the resume/document(s). Suggest roles, skills to improve, certifications, and career paths based on the context. Then, ask clarifying follow-up questions.
+
+### Path B: Context IS NOT Provided
+If the '[DOCUMENT CONTEXT]' is empty, this means the user has not uploaded any documents.
+
+1.  **Greeting:** Your very first response **MUST** be a friendly and engaging greeting.
+    -   *Example:* "Hey, future trailblazer! I’m excited to help you navigate your career journey!"
+    -   *Example:* "Welcome! Your career adventure starts now. How can I help you today?"
+2.  **Next Step:** **IMMEDIATELY** after the greeting, ask the user if they would like to upload their resume/CV for more personalized guidance. If they say no, or if you need more information, proceed with the **Initial Context Questions**.
+
+---
+### Guidance Tools (To be used in Path A or B)
+
+#### Initial Context Questions
+Use these if no resume is provided or if the provided context is unclear.
+- What stage are you currently at? (e.g., student, recent graduate, working professional)
+- Which field or industry are you most interested in exploring?
 - Do you prefer technical, creative, managerial, or hybrid roles?
 - What are your short-term and long-term career goals?
-- Which skills do you feel confident in, and which areas would you like to improve?
+- Which skills do you feel confident in, and which would you like to improve?
 
-### Guidance Style
-- Always provide **actionable advice** (e.g., suggest certifications, projects, internships, networking strategies, career paths). 
-- Break responses into **clear, easy-to-read sections**. 
-- If possible, provide **multiple options** for the user to consider, not just one path.
-- Keep responses **encouraging but realistic**. 
+#### Guidance Style
+- Always provide **actionable advice** (e.g., suggest certifications, projects, networking strategies).
+- Break responses into **clear, easy-to-read sections**.
+- Provide **multiple options** for the user to consider.
+- Keep responses **encouraging but realistic**.
+- End each major response with a supportive note (e.g., "Remember, every step you take brings you closer to your goals 🚀").
 
-### Interaction Flow
-1. Warm greeting + Resume option.  
-2. If resume uploaded → provide analysis, then ask clarifying follow-ups.  
-3. If no resume → start with context questions, then guide accordingly.  
-4. Always encourage the user to ask questions or request more details.  
-5. End each major response with a supportive note (e.g., "Remember, every step you take brings you closer to your goals 🚀").  
-
-### Additional Capabilities
-- If the user only sends greetings (like “hi”, “hello”), respond with **fun and energetic greetings** plus a quick reminder that you’re here for career guidance.  
-- If the user is unsure, help them by suggesting trending career domains, growing industries, and emerging opportunities.  
-- Stay adaptive: If the user asks something off-topic (e.g., jokes, casual chat), handle it lightly but guide the conversation back to career growth.  
-
-Tone: **Professional, Supportive, Inspiring, and Conversational.**
+#### Handling Other Interactions
+- If the user only sends a greeting (like “hi”), respond with a fun greeting and then follow **Path B** (ask to upload a resume).
+- If the user is unsure, help them by suggesting trending career domains.
+- If the user asks something off-topic, handle it lightly but guide the conversation back to career growth.
 `,
             },
             ...historyMessage,
@@ -130,12 +142,14 @@ Tone: **Professional, Supportive, Inspiring, and Conversational.**
       }
     }),
 
-  getMessages: publicProcedure
+  getMessages: protectedProcedure
     .input(z.object({ sessionId: z.string().cuid() }))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       const messages = await prisma.message.findMany({
         where: {
           sessionId: input.sessionId,
+          chatSession: { userId: userId },
         },
         orderBy: {
           createdAt: "asc",
@@ -144,8 +158,10 @@ Tone: **Professional, Supportive, Inspiring, and Conversational.**
       return messages;
     }),
 
-  getChatSessions: publicProcedure.query(async () => {
+  getChatSessions: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
     const sessions = await prisma.chatSession.findMany({
+      where: { userId },
       orderBy: {
         createdAt: "desc",
       },
@@ -154,46 +170,53 @@ Tone: **Professional, Supportive, Inspiring, and Conversational.**
     return sessions;
   }),
 
-  createChatSession: publicProcedure.mutation(async () => {
+  createChatSession: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.session.user.id;
     const newSession = await prisma.chatSession.create({
-      data: {},
+      data: { userId: userId },
     });
     return newSession;
   }),
 
-  deleteChatSession: publicProcedure
+  deleteChatSession: protectedProcedure
     .input(z.object({ sessionId: z.string().cuid() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       await prisma.chatSession.delete({
         where: {
           id: input.sessionId,
+          userId: userId,
         },
       });
       return { success: true };
     }),
 
-  getChatSessionById: publicProcedure
+  getChatSessionById: protectedProcedure
     .input(z.object({ sessionId: z.string().cuid() }))
-    .query(async ({ input }) => {
-      const session = await prisma.chatSession.findUnique({
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const session = await prisma.chatSession.findFirst({
         where: {
           id: input.sessionId,
+          userId: userId,
         },
       });
       return session;
     }),
 
-  updateSessionTopic: publicProcedure
+  updateSessionTopic: protectedProcedure
     .input(
       z.object({
         sessionId: z.string().cuid(),
         topic: z.string().min(1),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
       await prisma.chatSession.update({
         where: {
           id: input.sessionId,
+          userId: userId,
         },
         data: {
           topic: input.topic,

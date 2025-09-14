@@ -1,12 +1,12 @@
-"use client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { auth } from "@/auth";
+import Homepage from "@/components/Homepage";
+import { redirect } from "next/navigation";
 
-export default function HomePage() {
-  const router = useRouter();
-  useEffect(() => {
-    router.push("/chat");
-  }, [router]);
+export default async function Page() {
+  const session = await auth();
 
-  return <div>Loading...</div>;
+  if (session?.user) {
+    redirect("/chat");
+  }
+  return <Homepage />;
 }

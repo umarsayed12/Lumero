@@ -141,12 +141,16 @@ export default function Sidebar() {
         } items-center justify-between`}
       >
         <div className="flex items-center gap-1">
-          <BotIcon
-            onClick={toggleSidebar}
-            className="text-black dark:text-white cursor-e-resize hover:bg-sidebar-accent"
-          />
+          {state === "expanded" && (
+            <div
+              onClick={toggleSidebar}
+              className="text-black dark:text-white cursor-e-resize hover:bg-sidebar-accent"
+            >
+              <img src="/logo.png" className="w-7 h-8" />
+            </div>
+          )}
         </div>
-        {state === "expanded" && <SidebarTrigger className="cursor-e-resize" />}
+        <SidebarTrigger className="cursor-e-resize" />
       </SidebarHeader>
       {state === "expanded" && (
         <SidebarContent>

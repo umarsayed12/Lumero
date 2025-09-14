@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { UserCircle2 } from "lucide-react";
 
 import { NavigationMenu } from "@/components/ui/navigation-menu";
 import { SidebarTrigger, useSidebar } from "./ui/sidebar";
+import UserAuth from "./UserAuth";
 
 export default function Header() {
   const { toggleSidebar, state } = useSidebar();
@@ -22,7 +22,7 @@ export default function Header() {
         <span>Lumero</span>
       </div>
       <div className="cursor-pointer">
-        <UserCircle2 />
+        <UserAuth />
       </div>
     </NavigationMenu>
   );
