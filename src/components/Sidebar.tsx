@@ -17,7 +17,6 @@ import {
   useSidebar,
 } from "./ui/sidebar";
 import {
-  BotIcon,
   Ellipsis,
   FileText,
   PencilIcon,
@@ -35,7 +34,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "./ui/input";
 import { type ChatSession } from "@prisma/client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "./ui/button";
 
 type SessionBase = Omit<ChatSession, "createdAt" | "updatedAt">;
@@ -213,17 +212,20 @@ export default function Sidebar() {
                                 setOpenMenu((prev) => !prev);
                                 setOpenMenuId(session.id);
                               }}
-                              className="w-4 h-4 hover:bg-accent"
+                              className="w-4 h-4 hidden md:block hover:bg-accent"
                             />
                           )}
+                          <Ellipsis
+                            onClick={() => {
+                              setOpenMenu((prev) => !prev);
+                              setOpenMenuId(session.id);
+                            }}
+                            className="w-4 h-4 md:hidden hover:bg-accent"
+                          />
                         </div>
                       </SidebarMenuButton>
                       {openMenu && openMenuId === session.id && (
                         <div className="absolute right-0 z-10 w-[60%] h-[130px] bg-white shadow rounded-2xl flex flex-col justify-center gap-2 p-4 text-sm">
-                          <button className="flex items-center justify-start gap-2 hover:bg-gray-100 rounded-md px-2 py-1 transition cursor-pointer">
-                            <ShareIcon className="w-4 h-4" />
-                            <p>Share</p>
-                          </button>
                           <button
                             onClick={() => handleRenameClick(session)}
                             className="flex items-center justify-start gap-2 hover:bg-gray-100 rounded-md px-2 py-1 transition cursor-pointer"
