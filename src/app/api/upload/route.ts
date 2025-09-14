@@ -1,5 +1,3 @@
-// src/app/api/upload/route.ts
-
 import { prisma } from "@/lib/db";
 import { NextResponse } from "next/server";
 import pdf from "pdf-parse";

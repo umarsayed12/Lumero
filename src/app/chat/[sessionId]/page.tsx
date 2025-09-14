@@ -1,6 +1,6 @@
 import ChatUI from "@/components/ChatUI";
 
-export default function ChatPage({
+export default async function ChatPage({
   params,
 }: {
   params: { sessionId: string };

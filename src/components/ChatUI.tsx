@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import FormattedResponse from "./FormattedResponse";
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { useSidebar } from "./ui/sidebar";
-import { Clock, CheckCheckIcon, CheckIcon } from "lucide-react";
+import { CheckCheckIcon, CheckIcon } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -43,8 +43,7 @@ export default function ChatUI({ sessionId }: { sessionId: string }) {
   const { data: Usersession } = useSession();
   const { refetch } = trpc.chat.getChatSessions.useQuery();
 
-  const { data: messages, isLoading: isMessagesLoading } =
-    trpc.chat.getMessages.useQuery({ sessionId });
+  const { data: messages } = trpc.chat.getMessages.useQuery({ sessionId });
   const { data: session } = trpc.chat.getChatSessionById.useQuery({
     sessionId,
   });

@@ -7,13 +7,13 @@ import { SidebarTrigger, useSidebar } from "./ui/sidebar";
 import UserAuth from "./UserAuth";
 
 export default function Header() {
-  const { toggleSidebar, state } = useSidebar();
+  const { state } = useSidebar();
   return (
     <NavigationMenu
       viewport={false}
       className="shadow-md flex justify-between items-center px-6 py-4 border-b w-full bg-white"
     >
-      <div className="font-semibold">
+      <div className="font-semibold flex items-center">
         <span className="md:hidden">
           {state === "expanded" && (
             <SidebarTrigger className="cursor-e-resize" />

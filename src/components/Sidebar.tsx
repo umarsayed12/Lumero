@@ -20,7 +20,6 @@ import {
   Ellipsis,
   FileText,
   PencilIcon,
-  ShareIcon,
   SquarePen,
   Trash2,
 } from "lucide-react";
