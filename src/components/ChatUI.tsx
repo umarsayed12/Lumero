@@ -139,7 +139,11 @@ export default function ChatUI({ sessionId }: { sessionId: string }) {
         </DialogContent>
       </Dialog>
 
-      <div className="flex-1 w-full max-w-4xl mx-auto px-4 pt-6 pb-4 overflow-y-auto">
+      <div
+        className={`flex-1 w-full max-w-4xl mx-auto px-4 ${
+          messages?.length === 0 ? "pt-6" : "pt-0"
+        } pb-4 overflow-y-auto`}
+      >
         {messages?.length === 0 && (
           <div className="flex w-full flex-col items-center justify-center min-h-[60vh] space-y-8">
             <div className="px-1 text-center w-full text-pretty text-3xl whitespace-pre-wrap">
@@ -152,7 +156,7 @@ export default function ChatUI({ sessionId }: { sessionId: string }) {
           <div
             key={message.id || index}
             className={cn(
-              "flex items-center gap-4 group my-12 transition-opacity duration-300",
+              "flex items-center gap-4 group my-8 transition-opacity duration-300",
               message.role === "user" ? "justify-end" : "justify-start"
             )}
           >
