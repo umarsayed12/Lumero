@@ -37,7 +37,7 @@ You can access the live, deployed version of the application here:
 
 ---
 
-## 🔧 Tech Stack
+## Tech Stack
 
 This project is built with a modern, type-safe, full-stack technology stack.
 
@@ -55,7 +55,7 @@ This project is built with a modern, type-safe, full-stack technology stack.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 To get a local copy up and running, follow these simple steps.
 
@@ -131,7 +131,7 @@ Open [http://localhost:3000](https://www.google.com/search?q=http://localhost:30
 
 ---
 
-## ☁️ Deployment
+## Deployment
 
 This application is configured for easy deployment on **Vercel**.
 
