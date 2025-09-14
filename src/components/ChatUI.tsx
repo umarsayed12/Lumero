@@ -26,6 +26,7 @@ import { Button } from "./ui/button";
 import UploadButton from "./UploadButton";
 import { useSession } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import Image from "next/image";
 const placeholders = [
   "What career path would suit my skills best?",
   "Which certifications should I pursue to grow in my field?",
@@ -209,7 +210,7 @@ export default function ChatUI({ sessionId }: { sessionId: string }) {
         {isPending && (
           <div className="flex gap-4 group justify-start animate-fadeIn">
             <div className="h-8 w-8">
-              <img src="/logo.png" />
+              <Image src="/logo.png" alt="Lumero" />
             </div>
             <div className="bg-muted text-foreground rounded-2xl px-5 py-3 max-w-[85%]">
               <div className="flex items-center justify-center space-x-2">

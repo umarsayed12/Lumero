@@ -4,6 +4,7 @@ import { signIn } from "next-auth/react";
 import { Button } from "./ui/button";
 import { Loader2, LogIn } from "lucide-react";
 import { useState } from "react";
+import Image from "next/image";
 
 export default function Homepage() {
   const [loading, setLoading] = useState(false);
@@ -13,7 +14,7 @@ export default function Homepage() {
   };
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background text-center p-4">
-      <img src="/logo.png" className="w-21 h-22 mb-2" />
+      <Image src="/logo.png" alt="Lumero.ai" className="w-21 h-22 mb-2" />
       <h1 className="text-4xl sm:text-5xl font-bold mb-2">
         Welcome to Lumero.ai
       </h1>

@@ -35,6 +35,7 @@ import { Input } from "./ui/input";
 import { type ChatSession } from "@prisma/client";
 import { useState } from "react";
 import { Button } from "./ui/button";
+import Image from "next/image";
 
 type SessionBase = Omit<ChatSession, "createdAt" | "updatedAt">;
 
@@ -144,7 +145,7 @@ export default function Sidebar() {
               onClick={toggleSidebar}
               className="text-black dark:text-white cursor-e-resize hover:bg-sidebar-accent"
             >
-              <img src="/logo.png" className="w-7 h-8" />
+              <Image src="/logo.png" alt="Lumero.ai" className="w-7 h-8" />
             </div>
           )}
         </div>
